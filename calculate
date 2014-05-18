@@ -1,0 +1,21 @@
+#!/bin/sh
+
+set -eu
+
+rm -rf -- out
+
+mkdir -p out
+xz -d <logs.tar.xz | tar xv -C out
+
+mkdir -p out/words
+parallel "$@" --eta '< {} code/calc-words.py >out/words/{#}' ::: out/logs/*
+
+rm -rf -- out/shuffled
+mkdir -p out/shuffled
+parallel "$@" --eta '< {} code/shuffle.py out/shuffled {#}' ::: out/words/*
+
+mkdir -p out/reduced
+parallel "$@" --eta 'cat {}/* | code/reduce.py >out/reduced/{#}' ::: \
+	out/shuffled/*
+
+sort -nk2 out/reduced/*
